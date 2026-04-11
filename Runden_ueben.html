@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaufmännisches Runden – Lernapp</title>
+<style>
+/* Alle Schriften als System-Fonts – keine externen Abhängigkeiten */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --primary: #1a4f7a;
+  --primary-light: #2d7ab5;
+  --accent: #e8a020;
+  --correct: #2e7d32;
+  --correct-bg: #e8f5e9;
+  --wrong: #c62828;
+  --wrong-bg: #ffebee;
+  --neutral: #546e7a;
+  --border: #cfd8dc;
+  --text: #1a2332;
+  --muted: #78909c;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 1rem 2rem;
+}
+
+header {
+  width: 100%;
+  max-width: 520px;
+  padding: 1.5rem 0 1rem;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.02em;
+}
+
+header p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.3rem;
+}
+
+.main {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* STATS BAR */
+.stats-bar {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.stat-pill {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.82rem;
+  color: var(--neutral);
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.stat-pill strong { color: var(--text); font-weight: 700; }
+
+/* PROGRESS */
+.progress-wrap {
+  background: var(--border);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* LEVEL SELECTOR */
+.level-select {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.level-btn {
+  flex: 1;
+  padding: 0.6rem;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--neutral);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.level-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+.level-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+/* CARD */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 1.8rem 1.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.question-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+}
+
+.question-text {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 1.4rem;
+}
+
+.question-text .zahl {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary);
+  display: block;
+  margin: 0.4rem 0;
+  letter-spacing: -0.03em;
+}
+
+.question-text .stelle {
+  font-size: 0.9rem;
+  color: var(--neutral);
+}
+
+/* ANSWER BUTTONS */
+.answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.ans-btn {
+  padding: 0.85rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.ans-btn:hover:not(:disabled) {
+  border-color: var(--primary-light);
+  background: #e8f0f8;
+  transform: translateY(-1px);
+}
+.ans-btn:disabled { cursor: default; }
+.ans-btn.correct {
+  border-color: var(--correct);
+  background: var(--correct-bg);
+  color: var(--correct);
+}
+.ans-btn.wrong {
+  border-color: var(--wrong);
+  background: var(--wrong-bg);
+  color: var(--wrong);
+}
+
+/* FEEDBACK */
+.feedback {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: none;
+}
+.feedback.show { display: block; }
+.feedback.ok {
+  background: var(--correct-bg);
+  color: var(--correct);
+  border: 1px solid #a5d6a7;
+}
+.feedback.err {
+  background: var(--wrong-bg);
+  color: var(--wrong);
+  border: 1px solid #ef9a9a;
+}
+.feedback .erklaerung {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+/* NEXT BUTTON */
+.next-btn {
+  width: 100%;
+  padding: 0.9rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 1rem;
+  display: none;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.next-btn:hover { background: var(--primary-light); }
+.next-btn.show { display: block; }
+
+/* RESULT */
+.result-card {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.result-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.result-score {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+.result-label { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+.result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+.result-cell {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 0.7rem 0.5rem;
+}
+.result-cell .val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.result-cell .lbl {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+.restart-btn {
+  width: 100%;
+  padding: 0.9rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.restart-btn:hover { background: var(--primary-light); }
+
+/* REGEL-HINWEIS */
+.regel-box {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.82rem;
+  color: #5d4037;
+  line-height: 1.5;
+}
+.regel-box strong { color: #e65100; }
+
+/* HIDDEN */
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔢 Kaufmännisches Runden</h1>
+  <p>Übe das Runden nach kaufmännischer Methode</p>
+</header>
+
+<div class="main" id="app"></div>
+
+<script>
+// ─── AUFGABEN-GENERATOR ─────────────────────────────────────────────────────
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Kaufmännisch runden auf n Dezimalstellen
+function kaufRunden(zahl, stellen) {
+  const faktor = Math.pow(10, stellen);
+  return Math.round(zahl * faktor) / faktor;
+}
+
+// Erzeugt eine Zufallszahl je nach Level
+function genZahl(level) {
+  if (level === 1) {
+    // Ganze Zahlen auf Zehner/Hunderter
+    const basis = randInt(10, 999);
+    const nachkomma = (randInt(0, 9999) / 10000).toFixed(4);
+    return parseFloat(basis + '.' + randInt(1000,9999));
+  }
+  if (level === 2) {
+    // 2 Nachkommastellen, runden auf 1
+    const ganzer = randInt(1, 99);
+    const nk = randInt(10, 99);
+    return parseFloat(ganzer + '.' + nk);
+  }
+  // Level 3: 4 Nachkommastellen
+  const ganzer = randInt(1, 999);
+  const nk = randInt(1000, 9999);
+  return parseFloat(ganzer + '.' + nk);
+}
+
+const LEVELS = {
+  1: { name: 'Einfach',    desc: 'Auf ganze Zahl runden',         stellen: 0, minNK: 1, maxNK: 2 },
+  2: { name: 'Mittel',     desc: 'Auf 1 Dezimalstelle runden',    stellen: 1, minNK: 2, maxNK: 3 },
+  3: { name: 'Schwierig',  desc: 'Auf 2 Dezimalstellen runden',   stellen: 2, minNK: 3, maxNK: 4 },
+};
+
+// Generiert eine saubere Zufallszahl mit gewünschter Nachkommastellen-Anzahl
+function generateZahl(minNK, maxNK) {
+  const nkLen = randInt(minNK, maxNK);
+  const ganzer = randInt(1, 999);
+  let nk = '';
+  for (let i = 0; i < nkLen; i++) {
+    // Sicherstellen: letzte Stelle nicht 0 (sonst wäre es trivial)
+    if (i < nkLen - 1) nk += randInt(0, 9);
+    else nk += randInt(1, 9);
+  }
+  return parseFloat(ganzer + '.' + nk);
+}
+
+function generateAufgabe(level) {
+  const cfg = LEVELS[level];
+  const zahl = generateZahl(cfg.minNK, cfg.maxNK);
+  const richtig = kaufRunden(zahl, cfg.stellen);
+
+  // Falsche Antworten: leicht abweichend
+  const falschSet = new Set();
+  falschSet.add(richtig);
+
+  while (falschSet.size < 4) {
+    let kandidat;
+    const delta = [0.001, 0.01, 0.1, 1, 10][randInt(0, 4)];
+    kandidat = parseFloat((richtig + (Math.random() < 0.5 ? delta : -delta)).toFixed(cfg.stellen + 2));
+    kandidat = parseFloat(kandidat.toFixed(cfg.stellen));
+    if (kandidat >= 0 && kandidat !== richtig) falschSet.add(kandidat);
+  }
+
+  // Antworten mischen
+  let antworten = Array.from(falschSet);
+  // Fisher-Yates
+  for (let i = antworten.length - 1; i > 0; i--) {
+    const j = randInt(0, i);
+    [antworten[i], antworten[j]] = [antworten[j], antworten[i]];
+  }
+
+  // Erklärung: welche Stelle entscheidet
+  const zahlStr = zahl.toString();
+  const dotIdx = zahlStr.indexOf('.');
+  const entscheidStelle = dotIdx >= 0 ? parseInt(zahlStr[dotIdx + cfg.stellen + 1] || '0') : 0;
+  const richtung = entscheidStelle >= 5 ? 'aufgerundet' : 'abgerundet';
+
+  return {
+    zahl,
+    zahlStr: zahl.toString(),
+    richtig,
+    antworten,
+    stellen: cfg.stellen,
+    erklaerung: `Die entscheidende Stelle ist die ${cfg.stellen + 1}. Nachkommastelle (${entscheidStelle}). Da ${entscheidStelle} ${entscheidStelle >= 5 ? '≥ 5' : '< 5'} ist, wird ${richtung}.`,
+    stellenText: cfg.stellen === 0 ? 'auf ganze Zahlen' : `auf ${cfg.stellen} Dezimalstelle${cfg.stellen > 1 ? 'n' : ''}`,
+  };
+}
+
+// ─── APP STATE ───────────────────────────────────────────────────────────────
+
+const TOTAL = 10;
+let state = {
+  screen: 'quiz',   // 'quiz' | 'result'
+  level: 1,
+  aufgabe: null,
+  nr: 1,
+  richtig: 0,
+  falsch: 0,
+  geantwortet: false,
+};
+
+function neueAufgabe() {
+  state.aufgabe = generateAufgabe(state.level);
+  state.geantwortet = false;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+
+function render() {
+  const app = document.getElementById('app');
+  if (state.screen === 'result') {
+    renderResult(app);
+  } else {
+    renderQuiz(app);
+  }
+}
+
+function renderQuiz(app) {
+  const pct = Math.round(((state.nr - 1) / TOTAL) * 100);
+  const a = state.aufgabe;
+
+  app.innerHTML = `
+    <div class="stats-bar">
+      <div class="stat-pill">Frage <strong>${state.nr}</strong> / ${TOTAL}</div>
+      <div class="stat-pill">✅ <strong>${state.richtig}</strong></div>
+      <div class="stat-pill">❌ <strong>${state.falsch}</strong></div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar" style="width:${pct}%"></div>
+    </div>
+
+    <div class="level-select">
+      ${[1,2,3].map(l => `
+        <button class="level-btn ${state.level === l ? 'active' : ''}" onclick="setLevel(${l})">
+          ${LEVELS[l].name}
+        </button>
+      `).join('')}
+    </div>
+
+    <div class="regel-box">
+      <strong>Regel:</strong> Kaufmännisches Runden: Nachfolgende Stelle <strong>≥ 5 → aufrunden</strong>, <strong>< 5 → abrunden</strong> (wie mathematisches Runden).
+    </div>
+
+    <div class="card">
+      <div class="question-label">Aufgabe ${state.nr} von ${TOTAL}</div>
+      <div class="question-text">
+        Runde <span class="zahl">${a.zahlStr}</span>
+        <span class="stelle">${a.stellenText}</span>
+      </div>
+
+      <div class="answers" id="answers">
+        ${a.antworten.map((ant, i) => `
+          <button class="ans-btn" id="ans-${i}" onclick="antworten(${ant}, ${i})">
+            ${ant.toLocaleString('de-DE', { minimumFractionDigits: a.stellen, maximumFractionDigits: a.stellen })}
+          </button>
+        `).join('')}
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="next-btn" onclick="naechste()">
+        ${state.nr < TOTAL ? 'Nächste Aufgabe →' : 'Auswertung anzeigen →'}
+      </button>
+    </div>
+  `;
+}
+
+function renderResult(app) {
+  const pct = Math.round((state.richtig / TOTAL) * 100);
+  let icon = pct >= 80 ? '🎉' : pct >= 50 ? '👍' : '💪';
+  let msg = pct >= 80 ? 'Ausgezeichnet!' : pct >= 50 ? 'Gut gemacht!' : 'Weiter üben!';
+
+  app.innerHTML = `
+    <div class="result-card">
+      <div class="result-icon">${icon}</div>
+      <div class="result-score">${pct}%</div>
+      <div class="result-label">${msg}</div>
+      <div class="result-grid">
+        <div class="result-cell">
+          <div class="val">${state.richtig}</div>
+          <div class="lbl">Richtig</div>
+        </div>
+        <div class="result-cell">
+          <div class="val">${state.falsch}</div>
+          <div class="lbl">Falsch</div>
+        </div>
+        <div class="result-cell">
+          <div class="val">${TOTAL}</div>
+          <div class="lbl">Gesamt</div>
+        </div>
+      </div>
+      <button class="restart-btn" onclick="neustart()">Nochmal spielen 🔄</button>
+    </div>
+  `;
+}
+
+// ─── INTERAKTION ─────────────────────────────────────────────────────────────
+
+function setLevel(l) {
+  state.level = l;
+  state.nr = 1;
+  state.richtig = 0;
+  state.falsch = 0;
+  state.screen = 'quiz';
+  neueAufgabe();
+  render();
+}
+
+function antworten(gewaehlte, idx) {
+  if (state.geantwortet) return;
+  state.geantwortet = true;
+
+  const a = state.aufgabe;
+  const istRichtig = gewaehlte === a.richtig;
+
+  if (istRichtig) state.richtig++;
+  else state.falsch++;
+
+  // Buttons einfärben
+  a.antworten.forEach((ant, i) => {
+    const btn = document.getElementById('ans-' + i);
+    btn.disabled = true;
+    if (ant === a.richtig) btn.classList.add('correct');
+    else if (i === idx && !istRichtig) btn.classList.add('wrong');
+  });
+
+  // Feedback anzeigen
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback show ' + (istRichtig ? 'ok' : 'err');
+  fb.innerHTML = istRichtig
+    ? `✅ <strong>Richtig!</strong> ${a.richtig.toLocaleString('de-DE', { minimumFractionDigits: a.stellen })} ist korrekt.
+       <div class="erklaerung">${a.erklaerung}</div>`
+    : `❌ <strong>Leider falsch.</strong> Die richtige Antwort ist <strong>${a.richtig.toLocaleString('de-DE', { minimumFractionDigits: a.stellen })}</strong>.
+       <div class="erklaerung">${a.erklaerung}</div>`;
+
+  // Weiter-Button
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function naechste() {
+  if (state.nr >= TOTAL) {
+    state.screen = 'result';
+    render();
+    return;
+  }
+  state.nr++;
+  neueAufgabe();
+  render();
+}
+
+function neustart() {
+  state.screen = 'quiz';
+  state.nr = 1;
+  state.richtig = 0;
+  state.falsch = 0;
+  neueAufgabe();
+  render();
+}
+
+// ─── START ───────────────────────────────────────────────────────────────────
+neueAufgabe();
+render();
+</script>
+</body>
+</html>

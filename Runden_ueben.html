@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaufmännisches Runden – Lernapp</title>
+<style>
+/* Alle Schriften als System-Fonts – keine externen Abhängigkeiten */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --primary: #1a4f7a;
+  --primary-light: #2d7ab5;
+  --accent: #e8a020;
+  --correct: #2e7d32;
+  --correct-bg: #e8f5e9;
+  --wrong: #c62828;
+  --wrong-bg: #ffebee;
+  --neutral: #546e7a;
+  --border: #cfd8dc;
+  --text: #1a2332;
+  --muted: #78909c;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 1rem 2rem;
+}
+
+header {
+  width: 100%;
+  max-width: 520px;
+  padding: 1.5rem 0 1rem;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.02em;
+}
+
+header p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.3rem;
+}
+
+.main {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* STATS BAR */
+.stats-bar {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.stat-pill {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.82rem;
+  color: var(--neutral);
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.stat-pill strong { color: var(--text); font-weight: 700; }
+
+/* PROGRESS */
+.progress-wrap {
+  background: var(--border);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+
+
+/* CARD */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 1.8rem 1.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.question-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+}
+
+.question-text {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 1.4rem;
+}
+
+.question-text .zahl {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary);
+  display: block;
+  margin: 0.4rem 0;
+  letter-spacing: -0.03em;
+}
+
+.question-text .stelle {
+  font-size: 0.9rem;
+  color: var(--neutral);
+}
+
+/* EINGABE */
+.eingabe-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.eingabe-field {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg);
+  text-align: center;
+  transition: border-color 0.15s;
+  outline: none;
+}
+.eingabe-field:focus { border-color: var(--primary-light); background: #fff; }
+.eingabe-field.correct { border-color: var(--correct); background: var(--correct-bg); color: var(--correct); }
+.eingabe-field.wrong   { border-color: var(--wrong);   background: var(--wrong-bg);   color: var(--wrong); }
+.eingabe-field:disabled { cursor: default; }
+
+.pruefen-btn {
+  padding: 0.8rem 1.2rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.pruefen-btn:hover:not(:disabled) { background: var(--primary-light); }
+.pruefen-btn:disabled { opacity: 0.5; cursor: default; }
+
+.eingabe-hinweis {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+  text-align: center;
+}
+
+/* FEEDBACK */
+.feedback {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: none;
+}
+.feedback.show { display: block; }
+.feedback.ok {
+  background: var(--correct-bg);
+  color: var(--correct);
+  border: 1px solid #a5d6a7;
+}
+.feedback.err {
+  background: var(--wrong-bg);
+  color: var(--wrong);
+  border: 1px solid #ef9a9a;
+}
+.feedback .erklaerung {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+/* RICHTIG-OVERLAY */
+#richtig-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0;
+}
+#richtig-overlay.active {
+  animation: overlay-flash 1.1s ease-out forwards;
+}
+@keyframes overlay-flash {
+  0%   { opacity: 0; background: rgba(46,125,50,0); }
+  15%  { opacity: 1; background: rgba(46,125,50,0.18); }
+  55%  { opacity: 1; background: rgba(46,125,50,0.10); }
+  100% { opacity: 0; background: rgba(46,125,50,0); }
+}
+.richtig-text {
+  font-size: clamp(3.5rem, 18vw, 7rem);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 30px rgba(0,0,0,0.25), 0 0 60px #43a047;
+  letter-spacing: 0.06em;
+  transform: scale(0.4);
+  opacity: 0;
+}
+#richtig-overlay.active .richtig-text {
+  animation: richtig-pop 0.55s cubic-bezier(0.175,0.885,0.32,1.4) 0.05s forwards;
+}
+@keyframes richtig-pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  70%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+.richtig-stars {
+  font-size: 2.2rem;
+  margin-top: 0.4rem;
+  opacity: 0;
+}
+#richtig-overlay.active .richtig-stars {
+  animation: stars-in 0.4s ease-out 0.35s forwards;
+}
+@keyframes stars-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Konfetti-Partikel */
+.konfetti {
+  position: fixed;
+  top: -10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+}
+.konfetti.fall {
+  animation: konfetti-fall var(--dur) ease-in var(--delay) forwards;
+}
+@keyframes konfetti-fall {
+  0%   { opacity: 1; transform: translateY(0) rotate(0deg) scaleX(1); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(100vh) rotate(720deg) scaleX(-1); }
+}
+
+/* Feedback bounce-in bei richtig */
+.feedback.ok.bounce {
+  animation: feedback-bounce 0.5s cubic-bezier(0.175,0.885,0.32,1.3) forwards;
+}
+@keyframes feedback-bounce {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* NEXT BUTTON */
+.next-btn {
+  width: 100%;
+  padding: 0.9rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 1rem;
+  display: none;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.next-btn:hover { background: var(--primary-light); }
+.next-btn.show { display: block; }
+
+/* RESULT */
+.result-card {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.result-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.result-score {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+.result-label { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+.result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+.result-cell {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 0.7rem 0.5rem;
+}
+.result-cell .val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.result-cell .lbl {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+.restart-btn {
+  width: 100%;
+  padding: 0.9rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.restart-btn:hover { background: var(--primary-light); }
+
+/* REGEL-HINWEIS */
+.regel-box {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.82rem;
+  color: #5d4037;
+  line-height: 1.5;
+}
+.regel-box strong { color: #e65100; }
+
+/* HIDDEN */
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔢 Kaufmännisches Runden</h1>
+  <p>Üben Sie das Runden nach kaufmännischer Methode</p>
+</header>
+
+<div class="main" id="app"></div>
+
+<script>
+// ─── HILFSFUNKTIONEN ────────────────────────────────────────────────────────
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+
+// ─── AUFGABEN-GENERATOR ─────────────────────────────────────────────────────
+
+// Rundungsstellen-Bezeichnungen:
+// negativ = vor dem Komma, positiv = nach dem Komma
+// stellen: -2=Hunderter, -1=Zehner, 0=Einer, 1=Zehntel, 2=Hundertstel, 3=Tausendstel, 4=Zehntausendstel
+const STELLEN_WORT = {
+  '-2': 'auf Hunderter',
+  '-1': 'auf Zehner',
+   '0': 'auf Einer',
+   '1': 'auf Zehntel',
+   '2': 'auf Hundertstel',
+   '3': 'auf Tausendstel',
+   '4': 'auf Zehntausendstel',
+};
+
+// Entscheidende Stelle (welche Ziffer bestimmt das Runden)
+// Bei negativen stellen wird dotIdx+stellen als Index verwendet:
+//   stellen=-1 → dotIdx-1 = Einer-Stelle entscheidet (beim Runden auf Zehner)
+//   stellen=-2 → dotIdx-2 = Zehner-Stelle entscheidet (beim Runden auf Hunderter)
+const ENTSCHEID_WORT = {
+  '-2': '2. Stelle vor dem Komma (Zehner)',
+  '-1': '1. Stelle vor dem Komma (Einer)',
+   '0': '1. Nachkommastelle',
+   '1': '2. Nachkommastelle',
+   '2': '3. Nachkommastelle',
+   '3': '4. Nachkommastelle',
+   '4': '5. Nachkommastelle',
+};
+
+// Erzeugt Vorkommateil: 1–7 Stellen, erste Stelle nie 0
+function genVorkomma() {
+  const len = randInt(1, 7);
+  let s = '' + randInt(1, 9); // erste Stelle 1–9
+  for (let i = 1; i < len; i++) s += randInt(0, 9);
+  return s;
+}
+
+// Erzeugt immer exakt 5 Nachkommastellen, letzte nie 0
+function genNachkomma() {
+  let nk = '';
+  for (let i = 0; i < 4; i++) nk += randInt(0, 9);
+  nk += randInt(1, 9);
+  return nk;
+}
+
+// Erzeugt eine Zahl mit aufeinanderfolgenden 9ern, sodass beim Aufrunden
+// ein "Überlauf" über mehrere Stellen entsteht (z. B. 3.999,87 → 4.000).
+// stellen: die gewählte Rundungsstelle
+function genUeberlaufZahl(stellen) {
+  const neunLen = randInt(1, 3); // wie viele aufeinanderfolgende 9er
+
+  let vorkommaArr, nachkommaArr;
+
+  if (stellen <= 0) {
+    // Mindestlänge: |stellen| + neunLen + 1 (führende Nicht-9-Stelle)
+    const minVkLen = Math.abs(stellen) + neunLen + 1;
+    const vkLen = Math.max(minVkLen, randInt(minVkLen, minVkLen + 2));
+    vorkommaArr = [];
+    for (let i = 0; i < vkLen; i++) vorkommaArr.push(randInt(0, 9));
+    vorkommaArr[0] = randInt(1, 8); // führende Stelle: 1–8 (nicht 9, damit Überlauf sichtbar)
+
+    const einerIdx = vkLen - 1;
+    const zielIdx = einerIdx + stellen; // Index der Rundungsstelle im Vorkomma
+    // Zielstelle und neunLen-1 Stellen links davon → 9
+    for (let n = 0; n < neunLen; n++) {
+      const idx = zielIdx - n;
+      if (idx >= 1) vorkommaArr[idx] = 9;
+    }
+
+    // Nachkomma zufällig
+    nachkommaArr = [];
+    for (let i = 0; i < 4; i++) nachkommaArr.push(randInt(0, 9));
+    nachkommaArr.push(randInt(1, 9));
+
+    // Entscheidende Ziffer (direkt rechts der Rundungsstelle) → 5–9
+    if (stellen === 0) {
+      nachkommaArr[0] = randInt(5, 9);
+    } else {
+      const entschIdx = einerIdx + stellen + 1;
+      if (entschIdx <= einerIdx) vorkommaArr[entschIdx] = randInt(5, 9);
+    }
+
+  } else {
+    // Runden auf eine Nachkommastelle
+    const vkLen = randInt(1, 5);
+    vorkommaArr = [randInt(1, 8)];
+    for (let i = 1; i < vkLen; i++) vorkommaArr.push(randInt(0, 9));
+
+    nachkommaArr = [];
+    for (let i = 0; i < 5; i++) nachkommaArr.push(randInt(0, 9));
+
+    // Zielstelle (0-basiert) und neunLen-1 Stellen davor → 9
+    const zielNkIdx = stellen - 1;
+    for (let n = 0; n < neunLen; n++) {
+      const idx = zielNkIdx - n;
+      if (idx >= 0) nachkommaArr[idx] = 9;
+    }
+    // Entscheidende Ziffer (eine Stelle rechts der Zielstelle) → 5–9
+    if (stellen < 5) nachkommaArr[stellen] = randInt(5, 9);
+    // Letzte NK-Stelle darf nicht 0 sein
+    if (nachkommaArr[4] === 0) nachkommaArr[4] = randInt(1, 9);
+  }
+
+  return {
+    vorkommaStr: vorkommaArr.join(''),
+    nachkommaStr: nachkommaArr.join('')
+  };
+}
+
+// Parst den Komma-String in eine JS-Zahl
+function parseKomma(str) {
+  return parseFloat(str.replace(',', '.'));
+}
+
+// Kaufmännisch runden auf beliebige Stelle (auch negativ = vor Komma)
+function kaufRundenAllg(zahlNum, stellen) {
+  const faktor = Math.pow(10, stellen);
+  return Math.round(zahlNum * faktor) / faktor;
+}
+
+// Formatiert Ergebnis mit toLocaleString; bei negativen stellen 0 NK
+function deFormatAllg(zahl, stellen) {
+  const nk = Math.max(0, stellen);
+  return zahl.toLocaleString('de-DE', {
+    minimumFractionDigits: nk,
+    maximumFractionDigits: nk,
+  });
+}
+
+function generateAufgabe() {
+  // Mit ~35% Wahrscheinlichkeit eine Überlauf-Zahl generieren (mehrere 9er hintereinander)
+  const ueberlauf = Math.random() < 0.35;
+
+  // Stellen zunächst bestimmen (benötigt genUeberlaufZahl als Argument)
+  // Wir brauchen eine Vorschau auf die Stellenanzahl für die Stellenauswahl.
+  // Bei Normalzahlen: erst Zahl, dann Stelle. Bei Überlauf: erst Stelle, dann Zahl.
+
+  let vorkommaStr, nachkommaStr;
+
+  if (ueberlauf) {
+    // Stelle zuerst wählen (mit zufälliger Vorkommastellen-Annahme für Vorkomma-Stellen)
+    // Wir wählen aus allen möglichen Stellen; genUeberlaufZahl baut die passende Zahl
+    const alleMoeglich = [-2, -1, 0, 1, 2, 3, 4];
+    const stellen = alleMoeglich[randInt(0, alleMoeglich.length - 1)];
+    const gen = genUeberlaufZahl(stellen);
+    vorkommaStr = gen.vorkommaStr;
+    nachkommaStr = gen.nachkommaStr;
+    const zahlKommaStr = vorkommaStr + ',' + nachkommaStr;
+    const zahlNum = parseKomma(zahlKommaStr);
+    return finishAufgabe(zahlKommaStr, zahlNum, vorkommaStr, nachkommaStr, stellen);
+  }
+
+  vorkommaStr = genVorkomma();
+  nachkommaStr = genNachkomma();
+  const zahlKommaStr = vorkommaStr + ',' + nachkommaStr;
+  const zahlNum = parseKomma(zahlKommaStr);
+
+  // Mögliche Rundungsstellen abhängig von Vorkommastellen-Anzahl:
+  // Vor dem Komma: auf Zehner nur wenn ≥2 Vorkommastellen, Hunderter nur wenn ≥3
+  const vkLen = vorkommaStr.length;
+  const moeglicheStellen = [];
+  if (vkLen >= 3) moeglicheStellen.push(-2); // Hunderter
+  if (vkLen >= 2) moeglicheStellen.push(-1); // Zehner
+  moeglicheStellen.push(0, 1, 2, 3, 4);      // Einer bis Zehntausendstel
+
+  const stellen = moeglicheStellen[randInt(0, moeglicheStellen.length - 1)];
+
+  return finishAufgabe(zahlKommaStr, zahlNum, vorkommaStr, nachkommaStr, stellen);
+}
+
+// Gemeinsamer Abschluss: Erklärung und Rückgabeobjekt aufbauen
+function finishAufgabe(zahlKommaStr, zahlNum, vorkommaStr, nachkommaStr, stellen) {
+  const richtigNum = kaufRundenAllg(zahlNum, stellen);
+
+  // Entscheidende Ziffer ermitteln
+  let entscheidZiffer;
+  if (stellen <= 0) {
+    const dotStr = zahlKommaStr.replace(',', '.');
+    const dotIdx = dotStr.indexOf('.');
+    if (stellen === 0) {
+      entscheidZiffer = parseInt(dotStr[dotIdx + 1] || '0');
+    } else {
+      const idx = dotIdx + stellen;
+      entscheidZiffer = parseInt(dotStr[idx] || '0');
+    }
+  } else {
+    const dotStr = zahlKommaStr.replace(',', '.');
+    const dotIdx = dotStr.indexOf('.');
+    entscheidZiffer = parseInt(dotStr[dotIdx + stellen + 1] || '0');
+  }
+
+  const richtung = entscheidZiffer >= 5 ? 'aufgerundet' : 'abgerundet';
+  const eWort = ENTSCHEID_WORT[String(stellen)] || '';
+  const erklaerung = `Die ${eWort} (${entscheidZiffer}) entscheidet: Da ${entscheidZiffer} ${entscheidZiffer >= 5 ? '≥ 5' : '< 5'} ist, wird ${richtung}.`;
+
+  const stellenText = STELLEN_WORT[String(stellen)] || `auf ${stellen} Dezimalstellen`;
+
+  // Vorkommateil mit Tausenderpunkten formatieren
+  const vorkommaFormatiert = parseInt(vorkommaStr).toLocaleString('de-DE');
+  const zahlAnzeige = vorkommaFormatiert + ',' + nachkommaStr;
+
+  return {
+    zahlAnzeige,
+    zahlNum,
+    richtigNum,
+    stellen,
+    nkAnzeige: Math.max(0, stellen),
+    stellenText,
+    erklaerung,
+    richtigAnzeige: deFormatAllg(richtigNum, stellen),
+  };
+}
+
+// ─── APP STATE ───────────────────────────────────────────────────────────────
+
+const TOTAL = 10;
+let state = {
+  screen: 'quiz',
+  aufgabe: null,
+  nr: 1,
+  richtig: 0,
+  falsch: 0,
+  geantwortet: false,
+};
+
+function neueAufgabe() {
+  state.aufgabe = generateAufgabe();
+  state.geantwortet = false;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+
+function render() {
+  const app = document.getElementById('app');
+  state.screen === 'result' ? renderResult(app) : renderQuiz(app);
+}
+
+function renderQuiz(app) {
+  const pct = Math.round(((state.nr - 1) / TOTAL) * 100);
+  const a = state.aufgabe;
+
+  app.innerHTML = `
+    <div class="stats-bar">
+      <div class="stat-pill">Frage <strong>${state.nr}</strong> / ${TOTAL}</div>
+      <div class="stat-pill">✅ <strong>${state.richtig}</strong></div>
+      <div class="stat-pill">❌ <strong>${state.falsch}</strong></div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar" style="width:${pct}%"></div>
+    </div>
+
+    <div class="regel-box">
+      <strong>Regel für das kaufmännische Runden:</strong><br>Nachfolgende Stelle <strong>≥ 5 → aufrunden</strong>, <strong>&lt; 5 → abrunden</strong>.
+    </div>
+
+    <div class="card">
+      <div class="question-label">Aufgabe ${state.nr} von ${TOTAL}</div>
+      <div class="question-text">
+        Runden Sie <span class="zahl">${a.zahlAnzeige}</span>
+        <span class="stelle">${a.stellenText}</span>
+      </div>
+
+      <div class="eingabe-wrap">
+        <input
+          class="eingabe-field"
+          id="eingabe"
+          type="text"
+          inputmode="decimal"
+          placeholder="gerundete Zahl eingeben"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+        />
+        <button class="pruefen-btn" id="pruefen-btn" type="button">Prüfen</button>
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="next-btn" type="button">
+        ${state.nr < TOTAL ? 'Nächste Aufgabe →' : 'Auswertung anzeigen →'}
+      </button>
+    </div>
+  `;
+
+  // Event-Listener direkt nach dem Rendern anhängen
+  const pruefenBtn = document.getElementById('pruefen-btn');
+  const nextBtn    = document.getElementById('next-btn');
+  pruefenBtn.addEventListener('click', pruefen);
+  pruefenBtn.addEventListener('touchend', function(e) { e.preventDefault(); pruefen(); });
+  nextBtn.addEventListener('click', naechste);
+  nextBtn.addEventListener('touchend', function(e) { e.preventDefault(); naechste(); });
+  document.getElementById('eingabe').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') pruefen();
+  });
+}
+
+function renderResult(app) {
+  const pct = Math.round((state.richtig / TOTAL) * 100);
+  const icon = pct >= 80 ? '🎉' : pct >= 50 ? '👍' : '💪';
+  const msg  = pct >= 80 ? 'Ausgezeichnet!' : pct >= 50 ? 'Gut gemacht!' : 'Weiter üben!';
+
+  app.innerHTML = `
+    <div class="result-card">
+      <div class="result-icon">${icon}</div>
+      <div class="result-score">${pct}%</div>
+      <div class="result-label">${msg}</div>
+      <div class="result-grid">
+        <div class="result-cell"><div class="val">${state.richtig}</div><div class="lbl">Richtig</div></div>
+        <div class="result-cell"><div class="val">${state.falsch}</div><div class="lbl">Falsch</div></div>
+        <div class="result-cell"><div class="val">${TOTAL}</div><div class="lbl">Gesamt</div></div>
+      </div>
+      <button class="restart-btn" id="restart-btn">Nochmal spielen 🔄</button>
+    </div>
+  `;
+  const restartBtn = document.getElementById('restart-btn');
+  restartBtn.addEventListener('click', neustart);
+  restartBtn.addEventListener('touchend', function(e) { e.preventDefault(); neustart(); });
+}
+
+// ─── INTERAKTION ─────────────────────────────────────────────────────────────
+
+// Normalisiert Eingabe: Punkte als Tausendertrennzeichen entfernen, Komma → Punkt für parseFloat
+function normalizeEingabe(str) {
+  // Entferne alle Leerzeichen
+  str = str.trim().replace(/\s/g, '');
+  // Wenn Komma als Dezimalzeichen: Punkte sind Tausendertrenner → entfernen, Komma → Punkt
+  if (str.includes(',')) {
+    str = str.replace(/\./g, '').replace(',', '.');
+  }
+  // Sonst: Punkt ist evtl. Dezimalzeichen (Handy-Eingabe) → so lassen
+  return str;
+}
+
+function zeigeRichtigOverlay() {
+  // Overlay lazy-erstellen falls noch nicht im DOM
+  let overlay = document.getElementById('richtig-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'richtig-overlay';
+    overlay.innerHTML = '<div class="richtig-text">RICHTIG!</div><div class="richtig-stars">⭐ ⭐ ⭐</div>';
+    document.body.appendChild(overlay);
+  }
+
+  // Reset: Klasse entfernen, Reflow erzwingen, dann neu setzen
+  overlay.classList.remove('active');
+  void overlay.offsetWidth;
+  overlay.classList.add('active');
+
+  // Nach Ende der längsten Einzel-Animation (overlay-flash = 1.1s) aufräumen
+  setTimeout(() => overlay.classList.remove('active'), 1200);
+
+  // Konfetti
+  const farben = ['#f9c74f','#f94144','#43aa8b','#4361ee','#f3722c','#90be6d','#ffffff'];
+  for (let i = 0; i < 55; i++) {
+    const el = document.createElement('div');
+    el.className = 'konfetti fall';
+    const dur = (0.9 + Math.random() * 0.7);
+    const delay = (Math.random() * 0.5);
+    el.style.setProperty('--dur', dur + 's');
+    el.style.setProperty('--delay', delay + 's');
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.background = farben[Math.floor(Math.random() * farben.length)];
+    el.style.width  = (7 + Math.random() * 8) + 'px';
+    el.style.height = (7 + Math.random() * 8) + 'px';
+    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), (dur + delay + 0.2) * 1000);
+  }
+}
+
+function pruefen() {
+  if (state.geantwortet) return;
+
+  const feld = document.getElementById('eingabe');
+  const eingabe = feld ? feld.value : '';
+  if (!eingabe.trim()) return;
+
+  const normiert = normalizeEingabe(eingabe);
+  const eingabeNum = parseFloat(normiert);
+
+  if (isNaN(eingabeNum)) {
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback show err';
+    fb.innerHTML = '⚠️ <strong>Ungültige Eingabe.</strong> Bitte geben Sie eine Zahl mit Komma ein, z.&nbsp;B. <em>3.847</em> oder <em>3.847,25</em>';
+    return;
+  }
+
+  state.geantwortet = true;
+  const a = state.aufgabe;
+
+  // Vergleich: beide auf nkAnzeige-Stellen runden um Fließkomma-Artefakte zu vermeiden
+  const nk = a.nkAnzeige;
+  const istRichtig = parseFloat(eingabeNum.toFixed(nk)) === parseFloat(a.richtigNum.toFixed(nk));
+
+  if (istRichtig) state.richtig++;
+  else state.falsch++;
+
+  // Eingabefeld einfärben
+  if (feld) {
+    feld.disabled = true;
+    feld.classList.add(istRichtig ? 'correct' : 'wrong');
+  }
+  document.getElementById('pruefen-btn').disabled = true;
+
+  const fb = document.getElementById('feedback');
+  if (istRichtig) {
+    fb.className = 'feedback show ok';
+    fb.innerHTML = `✅ <strong>Sehr gut! ${a.richtigAnzeige} ist korrekt.</strong>
+       <div class="erklaerung">${a.erklaerung}</div>`;
+    // kurz warten, dann Bounce-Klasse setzen
+    requestAnimationFrame(() => fb.classList.add('bounce'));
+    zeigeRichtigOverlay();
+  } else {
+    fb.className = 'feedback show err';
+    fb.innerHTML = `❌ <strong>Leider falsch.</strong> Die richtige Antwort ist <strong>${a.richtigAnzeige}</strong>.
+       <div class="erklaerung">${a.erklaerung}</div>`;
+  }
+
+  document.getElementById('next-btn').classList.add('show');
+}
+
+function naechste() {
+  if (state.nr >= TOTAL) { state.screen = 'result'; render(); return; }
+  state.nr++;
+  neueAufgabe();
+  render();
+}
+
+function neustart() {
+  state.screen = 'quiz';
+  state.nr = 1;
+  state.richtig = 0;
+  state.falsch = 0;
+  neueAufgabe();
+  render();
+}
+
+// ─── START ───────────────────────────────────────────────────────────────────
+neueAufgabe();
+render();
+</script>
+</body>
+</html>
